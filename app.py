@@ -1,5 +1,5 @@
 """
-Invoice Generator Pro - Main Application
+Invoice Generator Pro - Free Preview + Paywall
 Copyright 2026 ApexDynamics Solutions | Built by Rotimi Ugbana
 """
 import streamlit as st
@@ -21,7 +21,8 @@ import base64
 COMPANY = "ApexDynamics Solutions"
 DEVELOPER = "Rotimi Ugbana"
 YEAR = "2026"
-VERSION = "v1.3"
+VERSION = "v2.0"
+PRICE_NGN = 15000
 
 st.markdown("""
 <style>
@@ -31,6 +32,24 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: bold;
+        text-align: center;
+    }
+    .paywall-box {
+        background: #16213E;
+        border: 2px solid #FFD700;
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        margin: 20px 0;
+    }
+    .paywall-box h3 {
+        color: #FFD700;
+        margin-bottom: 10px;
+    }
+    .locked-content {
+        filter: blur(5px);
+        pointer-events: none;
+        user-select: none;
     }
     .item-header {
         background: #16213E;
@@ -39,14 +58,6 @@ st.markdown("""
         margin: 5px 0;
         color: white;
         font-weight: 600;
-    }
-    .preview-banner {
-        background: #fff3cd;
-        border: 2px solid #ffc107;
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        margin: 15px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -59,21 +70,13 @@ engine, visualizer, report_builder, license_mgr = init_components()
 
 if 'licensed' not in st.session_state:
     st.session_state.licensed = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = ""
 
 # Sidebar
 with st.sidebar:
     st.markdown(f"## {COMPANY}")
-    st.markdown("### 💰 Pricing")
-    
-    with st.expander("Full Access License - N15,000", expanded=True):
-        st.write("✓ Create Invoices")
-        st.write("✓ PDF Export")
-        st.write("✓ Financial Dashboard")
-        st.write("✓ Print-Ready Formats")
-        st.write("✓ 1-Year License")
-    
-    st.markdown("---")
-    st.markdown("### 🔑 License Activation")
+    st.markdown("### Already Purchased?")
     
     lic_key = st.text_input("License Key", placeholder="INV-XXXX-XXXX-XXXX")
     lic_email = st.text_input("Email", placeholder="you@email.com")
@@ -83,31 +86,24 @@ with st.sidebar:
         if valid:
             st.success(f"✅ {msg} - Full Access!")
             st.session_state.licensed = True
+            st.session_state.user_email = lic_email
         else:
             st.error(f"❌ {msg}")
     
     if st.session_state.licensed:
-        st.success("🔓 Licensed")
+        st.success("🔓 Full Access Unlocked")
     else:
-        st.info("🔒 Preview Mode")
+        st.info("🔒 Free Preview Mode")
 
 # Main Content
 st.markdown(f'<h1 class="main-header">🧾 Invoice Generator Pro</h1>', unsafe_allow_html=True)
-st.markdown(f"### Professional Invoices + Financial Dashboard | {COMPANY}")
-
-if not st.session_state.licensed:
-    st.markdown("""
-    <div class="preview-banner">
-        <h3>🔒 PREVIEW MODE</h3>
-        <p>Create invoices for free. <strong>Activate license</strong> to download PDFs and access the dashboard.</p>
-        <p style="font-size:14px;">💰 Full Access: N15,000 (1-Year License)</p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f"### Create Free | Download PDF + Dashboard Unlocked | {COMPANY}")
+st.markdown(f"<p style='text-align:center;'>✅ Create Invoices Free | 🔒 PDF Download + Dashboard - ₦{PRICE_NGN:,} One-Time</p>", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["📝 Create Invoice", "📊 Dashboard", "📋 History"])
 
 with tab1:
-    st.markdown("### Create New Invoice")
+    st.markdown("### Create New Invoice (Free)")
     
     col1, col2 = st.columns(2)
     
@@ -135,6 +131,7 @@ with tab1:
     
     st.markdown("---")
     st.markdown("#### Invoice Items")
+    st.markdown("*(Amount is auto-calculated: Qty × Rate)*")
     
     num_items = st.number_input("Number of Items", 1, 20, 1)
     
@@ -171,41 +168,110 @@ with tab1:
             invoice = engine.create_invoice(data)
             st.success(f"Invoice #{invoice['invoice_number']} created!")
             
+            # Show totals (FREE)
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Subtotal", f"{currency} {invoice['subtotal']:,.2f}")
             col2.metric("Discount", f"-{currency} {invoice['discount_amount']:,.2f}")
             col3.metric("Tax", f"{currency} {invoice['tax_amount']:,.2f}")
             col4.metric("TOTAL", f"{currency} {invoice['total']:,.2f}")
             
-            if st.session_state.licensed:
-                pdf_data = report_builder.generate_invoice_pdf(invoice)
-                st.download_button("Download PDF Invoice", base64.b64decode(pdf_data), f"invoice_{invoice['invoice_number']}.pdf", "application/pdf", type="primary")
+            # ============ LOCKED SECTION ============
+            st.markdown("---")
+            
+            if not st.session_state.licensed:
+                # PAYWALL
+                st.markdown(f"""
+                <div class="paywall-box">
+                    <h3>🔒 Unlock PDF Download + Dashboard</h3>
+                    <p style="color:#B0B0B0;margin-bottom:15px;">
+                        Download print-ready invoices and access your 
+                        financial dashboard with revenue tracking.
+                    </p>
+                    <p style="color:#FFD700;font-size:24px;font-weight:700;margin:15px 0;">
+                        ₦{PRICE_NGN:,} One-Time
+                    </p>
+                    <p style="color:#B0B0B0;font-size:14px;margin-bottom:15px;">
+                        ✅ PDF Invoice Download<br>
+                        ✅ Print-Ready HTML<br>
+                        ✅ Financial Dashboard<br>
+                        ✅ Invoice History<br>
+                        ✅ 1-Year License
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("### 📧 Where should we send your license?")
+                user_email = st.text_input("Your Email Address", placeholder="you@email.com")
+                
+                if st.button("🔓 Unlock Full Access - ₦15,000", type="primary", use_container_width=True):
+                    if user_email and '@' in user_email:
+                        st.session_state.user_email = user_email
+                        st.success(f"✅ Check your email at {user_email}!")
+                        
+                        st.markdown(f"""
+                        ### Complete Your Payment:
+                        
+                        [🔗 Click here to pay ₦15,000 via Paystack](https://paystack.com/buy/invoice-generator-pro---full-access-license-nymvda)
+                        
+                        After payment, your license key will be sent to: **{user_email}**
+                        
+                        *Having trouble? WhatsApp: +234 806 520 9323*
+                        """)
+                    else:
+                        st.error("Please enter a valid email address")
             else:
-                st.info("Activate license (N15,000) to download PDF")
+                # LICENSED
+                st.success("🔓 Full Access Unlocked!")
+                
+                pdf_data = report_builder.generate_invoice_pdf(invoice)
+                st.download_button("📥 Download PDF Invoice", base64.b64decode(pdf_data), f"invoice_{invoice['invoice_number']}.pdf", "application/pdf", type="primary")
         else:
             st.error("Please fill in client details")
 
 with tab2:
-    st.markdown("### Financial Dashboard")
-    summary = engine.get_financial_summary()
+    st.markdown("### 📊 Financial Dashboard")
     
-    if summary:
-        st.components.v1.html(visualizer.summary_cards(summary), height=120)
-        st.markdown("---")
-        if summary['monthly']:
-            trend_chart = visualizer.revenue_trend(summary['monthly'])
-            st.components.v1.html(trend_chart, height=400)
+    if st.session_state.licensed:
+        summary = engine.get_financial_summary()
+        if summary:
+            st.components.v1.html(visualizer.summary_cards(summary), height=120)
+            if summary['monthly']:
+                trend_chart = visualizer.revenue_trend(summary['monthly'])
+                st.components.v1.html(trend_chart, height=400)
+        else:
+            st.info("Create invoices to see your dashboard!")
     else:
-        st.info("Create invoices to see your dashboard!")
+        # Locked dashboard
+        st.markdown("""<div class="locked-content">""", unsafe_allow_html=True)
+        st.markdown("#### Revenue Trend")
+        st.markdown("Monthly revenue charts will appear here...")
+        st.markdown("#### Top Clients")
+        st.markdown("Client rankings will appear here...")
+        st.markdown("""</div>""", unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="paywall-box">
+            <h3>🔒 Unlock Financial Dashboard</h3>
+            <p style="color:#FFD700;font-size:20px;font-weight:700;">₦{PRICE_NGN:,} One-Time</p>
+            <p style="color:#B0B0B0;">Track revenue, see top clients, monitor trends</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 with tab3:
-    st.markdown("### Invoice History")
-    if engine.invoices:
-        for inv in reversed(engine.invoices[-10:]):
-            with st.expander(f"Invoice #{inv['invoice_number']} - {inv['currency']} {inv['total']:,.2f}"):
-                st.write(f"**Date:** {inv['date']} | **To:** {inv['to_name']} | **Items:** {len(inv['items'])}")
+    st.markdown("### 📋 Invoice History")
+    
+    if st.session_state.licensed:
+        if engine.invoices:
+            for inv in reversed(engine.invoices[-10:]):
+                with st.expander(f"Invoice #{inv['invoice_number']} - {inv['currency']} {inv['total']:,.2f}"):
+                    st.write(f"**Date:** {inv['date']} | **To:** {inv['to_name']} | **Items:** {len(inv['items'])}")
+        else:
+            st.info("No invoices yet.")
     else:
-        st.info("No invoices yet.")
+        st.markdown("""<div class="locked-content">""", unsafe_allow_html=True)
+        st.markdown("Your invoice history will appear here...")
+        st.markdown("""</div>""", unsafe_allow_html=True)
+        st.info("🔒 Unlock to access your full invoice history")
 
 st.markdown("---")
 st.markdown(f"<p style='text-align:center;'>© {YEAR} {COMPANY} | Built by {DEVELOPER} | {VERSION}</p>", unsafe_allow_html=True)
